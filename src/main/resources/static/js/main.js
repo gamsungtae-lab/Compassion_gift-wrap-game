@@ -296,6 +296,11 @@ async function endGame() {
     await wait(900);
   }
 
+  // 저장이 아직 끝나지 않았으면(시트 모드는 수 초 걸릴 수 있음) 기다리는 중임을 알린다
+  let settled = false;
+  submit.then(() => { settled = true; });
+  await Promise.resolve();
+  if (!settled) centerMessage('순위를 기록하는 중…', true);
   let res = await submit;
   if (res instanceof Error) {
     toast(res.message || '순위 등록에 실패했어요.');
