@@ -11,7 +11,9 @@
 ./run-local.ps1          # http://localhost:8080
 ```
 
-운영 배포는 [DEPLOY.md](DEPLOY.md) 참고 (Docker Compose: Nginx HTTPS + 앱 + PostgreSQL).
+배포 방법은 두 가지:
+- **무료**: [FREE_DEPLOY.md](FREE_DEPLOY.md) — GitHub Pages/Netlify + 구글 스프레드시트(Apps Script)
+- **서버**: [DEPLOY.md](DEPLOY.md) — Docker Compose (Nginx HTTPS + Spring 앱 + PostgreSQL)
 
 JDK 21 + Maven 이 필요하다. `../.tools` 에 휴대용 JDK/Maven 이 있으면 스크립트가 자동으로 사용한다.
 테스트: `mvn test`

@@ -1,0 +1,21 @@
+# Netlify 배포 설정 (GitHub Pages 대신 사용할 때)
+# Netlify 사이트 설정 > Environment variables 에 SHEETS_URL 등록. 공개 주소는 Netlify 가 URL 변수로 제공.
+[build]
+  command = "BASE_URL=$URL bash scripts/build-static.sh"
+  publish = "_site"
+
+# GitHub Pages 와 달리 실제 HTTP 보안 헤더를 지정할 수 있다
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

@@ -5,3 +5,4 @@ data/
 .vscode/
 .env
 deploy/certs/
+_site/
