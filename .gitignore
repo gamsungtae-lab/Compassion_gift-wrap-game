@@ -1,0 +1,7 @@
+target/
+data/
+*.log
+.idea/
+.vscode/
+.env
+deploy/certs/

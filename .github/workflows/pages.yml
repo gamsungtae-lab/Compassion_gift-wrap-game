@@ -1,0 +1,57 @@
+# GitHub Pages 배포: main 브랜치에 push 하면 게임 화면(정적 파일)을 자동 공개한다.
+# 저장소 Settings > Secrets and variables > Actions > Variables 에 SHEETS_URL(Apps Script 웹 앱 주소)을 등록한다.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build site
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+          SHEETS_URL: ${{ vars.SHEETS_URL }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$SHEETS_URL" =~ ^https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec$ ]]; then
+            echo "::error::저장소 변수 SHEETS_URL 이 없거나 형식이 올바르지 않습니다 (https://script.google.com/macros/s/.../exec)"
+            exit 1
+          fi
+          mkdir -p _site
+          cp -r src/main/resources/static/. _site/
+          # 공유 미리보기(og:image 등)용 절대 주소 채우기
+          sed -i "s#__PUBLIC_BASE_URL__#${BASE_URL%/}#g" _site/index.html
+          printf "// GitHub Actions 가 생성한 파일\nexport const SHEETS_URL = '%s';\n" "$SHEETS_URL" > _site/js/config.js
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

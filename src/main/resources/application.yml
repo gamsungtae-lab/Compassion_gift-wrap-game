@@ -1,0 +1,90 @@
+server:
+  port: ${PORT:8080}
+  # 리버스 프록시(Nginx, ALB 등) 뒤에서 실제 클라이언트 IP를 쓰려면 NATIVE 또는 FRAMEWORK 로 설정
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:NONE}
+  # three.js(1.2MB) 등 정적 파일을 gzip 으로 전송 (모바일 로딩 시간 단축)
+  compression:
+    enabled: true
+    mime-types: text/html,text/css,text/javascript,application/javascript,application/json,image/svg+xml
+    min-response-size: 1024
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: strict
+
+spring:
+  application:
+    name: gift-wrap-game
+  datasource:
+    # 운영 환경에서는 반드시 환경변수로 주입 (비밀번호 하드코딩 금지)
+    url: ${DB_URL:jdbc:h2:file:./data/giftwrap;AUTO_SERVER=FALSE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  h2:
+    console:
+      enabled: false
+
+game:
+  duration-ms: 10000
+  target-taps: 60
+  # 사람이 낼 수 있는 한계를 넘는 탭은 부정행위로 간주 (10초 기준 초당 25회)
+  max-taps: 250
+  # 이보다 짧은 간격의 입력은 하나의 탭으로 합침 (중복 이벤트/매크로 완화)
+  min-tap-interval-ms: 20
+  # 게임 시작 후 결과 제출까지 허용되는 최대 시간
+  session-ttl-seconds: 120
+  zone-id: Asia/Seoul
+  banned-words:
+    - 시발
+    - 씨발
+    - 병신
+    - 개새
+    - 존나
+    - 좆
+    - fuck
+    - shit
+    - admin
+    - 관리자
+    - 운영자
+  rate-limit:
+    write-per-minute: 30
+    read-per-minute: 240
+
+# 운영자 계정 (선택). 미설정 시 관리자 API는 비활성화됨.
+# GAME_ADMIN_PASSWORD_HASH 는 BCrypt 해시({bcrypt}$2a$...) 를 환경변수로만 주입
+admin:
+  username: ${GAME_ADMIN_USERNAME:}
+  password-hash: ${GAME_ADMIN_PASSWORD_HASH:}
+
+# 공유 링크 미리보기(og:image/og:url)에 쓰는 공개 주소. 예: https://gift.compassion.or.kr
+app:
+  public-base-url: ${PUBLIC_BASE_URL:}
+
+# 헬스체크만 노출 (상세 정보 비공개)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO

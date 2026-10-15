@@ -1,0 +1,32 @@
+# 운영 프로필: SPRING_PROFILES_ACTIVE=prod
+# 모든 접속 정보는 환경변수로만 주입한다 (기본값 없음 → 누락 시 기동 실패로 즉시 발견)
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+  jpa:
+    hibernate:
+      # 첫 배포 시 update 로 테이블 생성 후, 안정화되면 validate 로 바꾸는 것을 권장
+      ddl-auto: ${DDL_AUTO:update}
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          max-age: 1h
+          cache-public: true
+
+server:
+  # Nginx 등 리버스 프록시 뒤에서 X-Forwarded-* 를 신뢰 (프록시가 반드시 덮어쓰도록 설정할 것)
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:NATIVE}
+  servlet:
+    session:
+      cookie:
+        secure: true
+
+logging:
+  level:
+    root: WARN
+    kr.or.compassion: INFO

@@ -1,0 +1,48 @@
+# nginx 공식 이미지가 ${SERVER_NAME} 을 환경변수로 치환한다.
+# 인증서: deploy/certs/fullchain.pem, deploy/certs/privkey.pem (DEPLOY.md 참고)
+
+server_tokens off;
+limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+
+server {
+    listen 80;
+    server_name ${SERVER_NAME};
+
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${SERVER_NAME};
+
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    client_max_body_size 32k;
+
+    # 클라이언트가 보낸 X-Forwarded-* 는 덮어써서 IP 위조를 막는다
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host  $host;
+    proxy_set_header X-Forwarded-Port  $server_port;
+
+    location /api/ {
+        limit_req zone=api burst=30 nodelay;
+        proxy_pass http://app:8080;
+    }
+
+    # 운영 내부 엔드포인트는 외부에서 차단 (헬스체크는 컨테이너 내부에서만)
+    location /actuator/ { return 404; }
+
+    location / {
+        proxy_pass http://app:8080;
+    }
+}

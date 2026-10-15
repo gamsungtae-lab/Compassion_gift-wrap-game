@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <!-- GitHub Pages 는 응답 헤더를 지정할 수 없으므로 메타 태그로 CSP 적용 (Spring 서버에서는 헤더 CSP 와 함께 적용됨) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>컴패션 선물 포장 챌린지</title>
+  <meta name="description" content="빠르게 탭해서 크리스마스 선물을 포장하고, 순위에 도전해 보세요!">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="한국컴패션">
+  <meta property="og:title" content="컴패션 크리스마스 선물 포장 챌린지">
+  <meta property="og:description" content="10초 동안 탭! 탭! 사랑을 포장하고 순위에 도전하세요.">
+  <meta property="og:url" content="__PUBLIC_BASE_URL__/">
+  <meta property="og:image" content="__PUBLIC_BASE_URL__/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0b1533">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <div id="stage" aria-hidden="true"></div>
+  <div id="vignette" aria-hidden="true"></div>
+
+  <!-- 로딩 -->
+  <section id="screen-loading" class="screen active">
+    <div class="loader"><span class="loader-bow">🎀</span><p>선물 포장대를 준비하고 있어요…</p></div>
+  </section>
+
+  <!-- 인트로: 닉네임 입력 -->
+  <section id="screen-intro" class="screen">
+    <div class="panel intro-panel">
+      <p class="eyebrow">Merry Christmas · Compassion</p>
+      <h1 class="title">사랑을 포장해요<br><span>선물 포장 챌린지</span></h1>
+      <p id="challenge-banner" class="challenge" hidden></p>
+      <ol class="howto">
+        <li><b>1</b> 선물을 고르고</li>
+        <li><b>2</b> 10초 동안 화면을 <em>빠르게 탭!</em></li>
+        <li><b>3</b> 포장 완성 &amp; 순위 확인</li>
+      </ol>
+      <form id="nick-form" class="nick-form" novalidate autocomplete="off">
+        <label for="nickname">닉네임</label>
+        <input id="nickname" name="nickname" type="text" inputmode="text" maxlength="12" minlength="2"
+               placeholder="한글/영문/숫자 2~12자" required spellcheck="false" autocapitalize="off">
+        <p id="nick-error" class="form-error" role="alert"></p>
+        <button type="submit" class="btn primary big" id="nick-submit" disabled>선물 고르러 가기</button>
+      </form>
+      <div class="row-links">
+        <button type="button" class="btn ghost" data-action="open-ranking">🏆 실시간 랭킹</button>
+        <span id="best-badge" class="best" hidden></span>
+      </div>
+      <p id="offline-note" class="offline" hidden>오프라인 미리보기 모드 · 기록은 이 기기에만 저장돼요</p>
+    </div>
+  </section>
+
+  <!-- 선물 선택 -->
+  <section id="screen-select" class="screen">
+    <header class="select-head">
+      <button type="button" class="btn icon" data-action="back-intro" aria-label="뒤로">‹</button>
+      <div>
+        <p class="eyebrow">STEP 1 · 선물 고르기</p>
+        <h2>어린이에게 어떤 선물을<br>보내줄까요?</h2>
+      </div>
+    </header>
+    <div class="select-bottom">
+      <div id="gift-info" class="gift-info">
+        <h3 id="gift-name"></h3>
+        <p id="gift-desc"></p>
+      </div>
+      <div class="select-panel panel">
+        <div id="gift-list" class="gift-list" role="listbox" aria-label="선물 목록"></div>
+        <button type="button" class="btn primary big" data-action="start-game">이 선물 포장 시작하기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 플레이 HUD -->
+  <section id="screen-play" class="screen">
+    <div class="hud-top">
+      <div class="progress-wrap">
+        <div class="progress-label"><span id="stage-label">준비</span><span id="progress-pct">0%</span></div>
+        <div class="progress"><div id="progress-bar"></div></div>
+      </div>
+      <div class="timer" aria-live="off">
+        <svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="19"/><circle id="timer-ring" class="ring" cx="22" cy="22" r="19"/></svg>
+        <span id="timer-text">10.0</span>
+      </div>
+    </div>
+    <div id="countdown" class="countdown" aria-live="assertive"></div>
+    <div id="float-layer" class="float-layer" aria-hidden="true"></div>
+    <div class="hud-bottom">
+      <div class="stat-big"><span id="tap-count">0</span><small>TAPS</small></div>
+      <div class="speed">
+        <div class="speed-bar"><div id="speed-fill"></div></div>
+        <span id="speed-text">초당 0회</span>
+      </div>
+      <div id="combo" class="combo"></div>
+    </div>
+    <div id="tap-hint" class="tap-hint">TAP!</div>
+    <div id="tap-layer" class="tap-layer"></div>
+  </section>
+
+  <!-- 결과 -->
+  <section id="screen-result" class="screen">
+    <div class="result-scroll">
+      <div class="panel result-card">
+        <p class="eyebrow">포장 완료! 사랑이 전달되었어요</p>
+        <div class="grade-row">
+          <div id="grade-badge" class="grade-badge">S</div>
+          <div>
+            <h2 id="grade-title"></h2>
+            <p id="grade-desc"></p>
+          </div>
+        </div>
+        <div class="score"><span id="score-value">0</span><small>점</small></div>
+        <p id="new-best" class="new-best" hidden>✨ 개인 최고 기록 갱신!</p>
+        <div class="ranks">
+          <div class="rank-box"><small>전체 순위</small><b id="rank-all">-</b><span id="rank-all-total"></span></div>
+          <div class="rank-box"><small>오늘 순위</small><b id="rank-today">-</b><span id="rank-today-total"></span></div>
+        </div>
+        <dl class="stats">
+          <div><dt>탭 수</dt><dd id="st-taps"></dd></div>
+          <div><dt>평균 속도</dt><dd id="st-avg"></dd></div>
+          <div><dt>최고 속도</dt><dd id="st-peak"></dd></div>
+          <div><dt>최대 콤보</dt><dd id="st-combo"></dd></div>
+          <div><dt>리듬 안정도</dt><dd id="st-steady"></dd></div>
+          <div><dt>포장 완성</dt><dd id="st-complete"></dd></div>
+        </dl>
+        <details class="formula">
+          <summary>점수는 이렇게 계산돼요</summary>
+          <ul>
+            <li>탭 1회 = <b>100점</b></li>
+            <li>최고 순간 속도(1초간 최다 탭) × <b>150점</b></li>
+            <li>최대 콤보(0.25초 안에 이어진 탭) × <b>30점</b></li>
+            <li>리듬 안정도(0~100) × <b>10점</b></li>
+            <li>60탭 안에 포장 완성 시 <b>+2,000점</b> + 남은 시간 보너스</li>
+          </ul>
+        </details>
+        <div class="actions">
+          <button type="button" class="btn primary" data-action="share">📣 결과 공유하기</button>
+          <button type="button" class="btn" data-action="save-image">🖼️ 이미지 저장</button>
+          <button type="button" class="btn" data-action="retry">🔁 다시 도전</button>
+          <button type="button" class="btn" data-action="choose-again">🎁 다른 선물</button>
+        </div>
+      </div>
+      <div class="panel board-card">
+        <div class="board-head">
+          <h3>🏆 실시간 랭킹 <span class="live-dot" title="자동 갱신"></span></h3>
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" class="tab active" data-period="all">전체</button>
+            <button type="button" role="tab" class="tab" data-period="today">오늘</button>
+          </div>
+        </div>
+        <ol id="board-result" class="board"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 랭킹 모달 -->
+  <div id="ranking-modal" class="modal" hidden>
+    <div class="panel modal-card" role="dialog" aria-modal="true" aria-labelledby="ranking-title">
+      <div class="board-head">
+        <h3 id="ranking-title">🏆 실시간 랭킹 <span class="live-dot"></span></h3>
+        <button type="button" class="btn icon" data-action="close-ranking" aria-label="닫기">×</button>
+      </div>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" class="tab active" data-period="all">전체</button>
+        <button type="button" role="tab" class="tab" data-period="today">오늘</button>
+      </div>
+      <ol id="board-modal" class="board"></ol>
+    </div>
+  </div>
+
+  <button type="button" id="sound-toggle" class="sound-toggle" aria-label="소리 켜기/끄기">🔊</button>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
