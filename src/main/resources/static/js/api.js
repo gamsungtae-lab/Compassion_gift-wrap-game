@@ -92,7 +92,26 @@ export class SheetsApi {
 
   async init() {}
 
+  /**
+   * 참여자가 몰려 서버가 바쁠 때(BUSY) 잠시 기다렸다 자동 재시도한다.
+   * BUSY 는 서버가 게임 기록을 건드리기 전에 거절한 경우라 같은 제출을 다시 보내도 안전하다.
+   * 결과 제출(finish)의 통신 오류는 이미 처리됐을 수 있어 재시도하지 않는다.
+   */
   async call(method, payload) {
+    const safeToRepeat = method === 'GET' || payload.action === 'start';
+    const delays = [1200, 2500, 4000];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.once(method, payload);
+      } catch (e) {
+        const retryable = e.code === 'BUSY' || (safeToRepeat && (e.code === 'NETWORK' || e.code === 'SERVER_ERROR'));
+        if (!retryable || attempt >= delays.length) throw e;
+        await new Promise((r) => setTimeout(r, delays[attempt] + Math.random() * 800));
+      }
+    }
+  }
+
+  async once(method, payload) {
     let res;
     try {
       if (method === 'GET') {

@@ -216,6 +216,24 @@ try {
   } catch (e) {
     log(e.code === 'ALREADY_FINISHED' && e.message.length > 0, 'SheetsApi 오류 코드/메시지 전달', e.code);
   }
+  // 서버가 바쁠 때(BUSY) 자동 재시도: 처음 두 번은 잠금 획득 실패 → 세 번째에 성공해야 함
+  const g2 = await api.startGame('재시도요정', 'BOOK');
+  advance(10500);
+  let lockFails = 2;
+  const realLock = window.LockService;
+  window.LockService = { getScriptLock: () => ({ tryLock: () => (lockFails-- > 0 ? false : true), releaseLock: () => {} }) };
+  const t0 = performance.now();
+  const f2 = await api.finishGame(g2.gameId, Array.from({ length: 40 }, (_, i) => i * 200));
+  window.LockService = realLock;
+  log(f2.result.tapCount === 40 && lockFails < 0, '서버 혼잡(BUSY) 시 자동 재시도 후 성공', `${Math.round(performance.now() - t0)}ms`);
+
+  // 통신 오류는 결과 제출에서 재시도하지 않음 (중복 처리 방지)
+  let calls = 0;
+  const okFetch = window.fetch;
+  window.fetch = async () => { calls++; throw new TypeError('network down'); };
+  try { await api.finishGame(uuid(), [0]); } catch (e) { log(e.code === 'NETWORK' && calls === 1, '결과 제출 통신 오류는 1회만 시도', `calls=${calls}`); }
+  window.fetch = okFetch;
+
   window.fetch = realFetch;
 } catch (e) {
   log(false, '예외 발생', e.stack || String(e));
